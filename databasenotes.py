@@ -47,9 +47,105 @@ header = ("Name", "Engine", "Version", "Row_format", "Rows", "Avg_row_length", "
 statement = "SHOW TABLE STATUS"
 results = self.fetchquery(statement)
 return header, results
+
 def describe(self, tablename):
 "Returns the column structure of a specified table"
 header = ("Field", "Type", "Null", " Key", "Default", "Extra")
 statement = "SHOW COLUMNS FROM %s" %(tablename)
 results = self.fetchquery(statement)
 return header, results
+
+#retrieve the CREATE statements
+def getcreate(self, type, name):
+"Internal method that returns the CREATE statement of an object when given the object type and name"
+statement = "SHOW CREATE %s %s" %(type, name)
+results = self.fetchquery(statement)
+return results
+
+def dbcreate(self):
+"Returns the CREATE statement for the current db"
+type = "DATABASE"
+name = db
+header = ("Database", "Create Database")
+results = self.getcreate(type, name)
+return header, results
+
+def tbcreate(self, tbname):
+"Returns the CREATE statement for a specified table"
+type = "TABLE"
+header = ("Table, Create Table")
+results = self.getcreate(type, tbname)
+return header, results
+
+#define main() 
+def main():
+mydb = Database()
+
+print mydb.tables()
+print mydb.tbstats()
+print mydb.dbcreate()
+for i in mydb.tables()[1]:
+print mydb.describe(i)
+
+tables = mydb.tables()
+print "Tables of %s" %(db)
+for c in xrange(0, len(tables[1])):
+    print tables[1][c][0]
+print '\n\n'
+
+#writing resproc()
+def resproc(finput):
+     "Compiles the headers and results into a report"
+     header = finput[0]
+     results = finput[1]
+     output = {}
+     c = 0
+     for r in xrange(0, len(results)):
+         record = results[r]
+         outrecord = {}
+         for column in xrange(0, len(header)):
+             outrecord[header[column]] = record[column]
+         output[str(c)] = outrecord
+         c += 1
+         orecord = ""
+         for record in xrange(0, len(results)):
+             record = str(record)
+             item = output[record]
+             for k in header:
+                 outline = "%s : %s\n" %(k, item[k])
+                 orecord = orecord + outline
+            orecord = orecord + '\n\n'
+         return orecord
+  
+#writing table stats tbstats()
+tablestats = mydb.tbstats()
+print "Table Statuses"
+print resproc(tablestats)
+print '\n\n'
+
+#writing dbcreate()
+dbcreation = mydb.dbcreate()
+print "Database CREATE Statement"
+print resproc(dbcreation)
+print '\n\n'
+
+#designate the database
+#!/usr/bin/env python
+import sys
+import MySQLdb
+host = 'localhost'
+user = 'skipper'
+passwd = 'secret'
+
+#set database
+db = sys.argv[1]
+
+#login
+try:
+mydb = MySQLdb.connect(host, user, passwd)
+cursor = mydb.cursor()
+statement = "USE %s" %(db)
+cursor.execute(statement)
+except MySQLdb.Error, e:
+print "There was a problem in accessing the database %s with the credentials you provided. Please check the privileges of the user account and retry. The error and other debugging information follow below.\n\n%s" %(db, e)
+        
